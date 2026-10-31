@@ -13,7 +13,7 @@ name: Docker image
 # For GHCR the automatic GITHUB_TOKEN is sufficient.
 #
 # Tags:
-#   Push to main / weekly rebuild  → latest, sha-<short>, kp2bw-<version>
+#   Push to main / update check    → latest, sha-<short>, kp2bw-<version>
 #   Git tag v1.2.3                  → 1.2.3, 1.2, 1, latest
 #   Pull request                    → build only, nothing is published
 
@@ -29,9 +29,6 @@ on:
       - .github/workflows/docker.yml
   pull_request:
     branches: [main]
-  schedule:
-    # Rebuild weekly so security updates of the base images are picked up
-    - cron: "17 4 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -128,9 +125,8 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: ${{ steps.publish.outputs.enabled == 'true' }}
-          # Always pull fresh base images; weekly rebuilds also skip the cache
+          # Base images are pinned by digest; check-updates.yml bumps them weekly
           pull: true
-          no-cache: ${{ github.event_name == 'schedule' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha

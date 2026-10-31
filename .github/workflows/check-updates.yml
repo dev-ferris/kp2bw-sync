@@ -1,0 +1,88 @@
+name: Check for updates
+
+# Weekly check of everything the image is built from:
+#   - kp2bw (PyPI), Bitwarden CLI and esbuild (npm)
+#   - digests of the base images (python:3.14-alpine, node:22-alpine),
+#     i.e. rebuilds of the same tag with security updates
+#
+# If something changed, the Dockerfile is updated, a test build for amd64 is run
+# (including the smoke test), the change is committed to main and the
+# "Docker image" workflow is started. If the test build fails, nothing is
+# committed and this run fails, so a broken update never reaches the registries.
+
+on:
+  schedule:
+    - cron: "41 3 * * 1"   # Mondays 03:41 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write   # commit the updated Dockerfile
+  actions: write    # start the build workflow
+
+concurrency:
+  group: check-updates
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Look for updates
+        id: updates
+        run: python3 .github/scripts/check_updates.py Dockerfile
+
+      - name: Test build (amd64)
+        if: steps.updates.outputs.changed == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: kp2bw-sync:update-test
+
+      - name: Smoke test
+        if: steps.updates.outputs.changed == 'true'
+        run: |
+          docker run --rm --entrypoint sh kp2bw-sync:update-test -c \
+            'node --version && HTTPS_PROXY=http://127.0.0.1:9 bw --version 2>/dev/null && kp2bw --version && python3 -c "import pykeepass"'
+
+      - name: Commit and push
+        if: steps.updates.outputs.changed == 'true'
+        env:
+          SUMMARY: ${{ steps.updates.outputs.summary }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Dockerfile
+          git commit -q -m "Update image dependencies" -m "$SUMMARY"
+          git push origin HEAD:main
+
+      - name: Start build workflow
+        if: steps.updates.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Pushes made with GITHUB_TOKEN do not trigger other workflows,
+        # so the build is started explicitly
+        run: gh workflow run docker.yml --ref main
+
+      - name: Summary
+        env:
+          CHANGED: ${{ steps.updates.outputs.changed }}
+          SUMMARY: ${{ steps.updates.outputs.summary }}
+        run: |
+          {
+            if [ "$CHANGED" = "true" ]; then
+              echo "### Updates found – image build started"
+              echo
+              printf '%s\n' "$SUMMARY" | sed 's/^/- /'
+            else
+              echo "### Everything is up to date"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

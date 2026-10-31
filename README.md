@@ -458,6 +458,8 @@ sh -c 'cp {TEMP_DATABASE} /share/db.kdbx.tmp && mv /share/db.kdbx.tmp /share/db.
 | `deref.py` | Resolves references/placeholders into an encrypted copy |
 | `.github/workflows/docker.yml` | Multi-arch build and publish |
 | `.github/workflows/dockerhub-readme.yml` | Publishes this README as the Docker Hub overview |
+| `.github/workflows/check-updates.yml` | Weekly check for new kp2bw/Bitwarden CLI/esbuild versions and base image updates; updates the Dockerfile and starts the build |
+| `.github/scripts/check_updates.py` | Update check used by that workflow |
 
 ## Related projects
 
