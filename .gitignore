@@ -1,0 +1,16 @@
+# Local configuration with passwords – never commit
+.env
+secrets/
+
+# KeePass databases and key files
+*.kdbx
+*.keyx
+*.key
+
+# Certificates
+*.crt
+*.pem
+
+# Python
+__pycache__/
+*.pyc

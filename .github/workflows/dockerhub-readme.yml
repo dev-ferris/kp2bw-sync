@@ -1,0 +1,65 @@
+name: Docker Hub description
+
+# Publishes README.md as the Docker Hub repository overview.
+#
+# Uses the same settings as the image workflow:
+#   DOCKERHUB_USERNAME  Docker Hub user or namespace (repository variable or secret)
+#   DOCKERHUB_TOKEN     Docker Hub access token (repository secret)
+# Updating the description requires a token with the "Read, Write, Delete"
+# scope – a "Read & Write" token is enough for pushing images, but not for this.
+#
+# Limits on Docker Hub: overview 25,000 bytes, short description 100 bytes.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - README.md
+      - .github/workflows/dockerhub-readme.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dockerhub-readme
+  cancel-in-progress: true
+
+jobs:
+  description:
+    runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USER: ${{ vars.DOCKERHUB_USERNAME || secrets.DOCKERHUB_USERNAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check settings and size
+        id: check
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          missing=""
+          [ -n "$DOCKERHUB_USER" ]  || missing="$missing DOCKERHUB_USERNAME"
+          [ -n "$DOCKERHUB_TOKEN" ] || missing="$missing DOCKERHUB_TOKEN"
+          if [ -n "$missing" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Docker Hub description skipped, not found at repository level:$missing"
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+          size=$(wc -c < README.md)
+          if [ "$size" -gt 25000 ]; then
+            echo "::warning::README.md has $size bytes – Docker Hub truncates the overview after 25,000 bytes"
+          fi
+
+      - name: Update Docker Hub description
+        if: steps.check.outputs.enabled == 'true'
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ env.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ env.DOCKERHUB_USER }}/${{ github.event.repository.name }}
+          short-description: One-way sync from a KeePass database to Vaultwarden, built on kp2bw and the Bitwarden CLI
+          readme-filepath: ./README.md
+          enable-url-completion: true

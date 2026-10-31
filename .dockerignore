@@ -1,0 +1,6 @@
+# Only the scripts go into the image – no configuration, no secrets
+*
+!entrypoint.sh
+!sync.sh
+!scheduler.py
+!deref.py

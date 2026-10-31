@@ -1,0 +1,82 @@
+name: kp2bw
+
+services:
+  kp2bw:
+    # Image built by the GitHub Actions workflow (linux/amd64, linux/arm64).
+    # The package is private: run "docker login ghcr.io" on the host once with a
+    # token that has read:packages. KP2BW_IMAGE overrides it (other tag/registry).
+    image: ${KP2BW_IMAGE:-ghcr.io/dev-ferris/kp2bw-sync:latest}
+    pull_policy: always
+    container_name: kp2bw
+    restart: unless-stopped
+    # Tiny init as PID 1: forwards signals, reaps child processes
+    init: true
+    # Must be able to read the .kdbx
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      # ---------- Required (from .env) ----------
+      BW_SERVER: ${BW_SERVER:?set BW_SERVER in .env}
+      KEEPASS_FILE: ${KEEPASS_FILE:?set KEEPASS_FILE in .env}
+      # ---------- Defaults, override in .env if needed ----------
+      CRON_SCHEDULE: ${CRON_SCHEDULE:-*/15 * * * *}
+      RUN_ON_START: ${RUN_ON_START:-true}
+      KP2BW_ARGS: ${KP2BW_ARGS:--v --skip-expired --no-include-recycle-bin}
+      KP2BW_HTTP_TIMEOUT: ${KP2BW_HTTP_TIMEOUT:-300}
+      # Resolve references in title/URL/notes/custom fields before the import
+      RESOLVE_REFS: ${RESOLVE_REFS:-true}
+      # Delay used to detect a .kdbx that is currently being written
+      SETTLE_SECONDS: ${SETTLE_SECONDS:-3}
+      # Threshold for the image healthcheck (match it to CRON_SCHEDULE)
+      HEALTH_MAX_MINUTES: ${HEALTH_MAX_MINUTES:-60}
+      TZ: ${TZ:-UTC}
+    volumes:
+      # Mount the directory, not the file: KeePassXC replaces the file on save,
+      # a single-file mount would keep pointing to the old version
+      - ${KEEPASS_DIR:?set KEEPASS_DIR in .env}:/data:ro
+      # Optional: root certificate (PEM) of your own CA, if Vaultwarden uses a
+      # certificate from an internal CA. Nothing is mounted if unset.
+      - ${CA_CERT:-/dev/null}:/certs/root_ca.crt:ro
+    secrets:
+      - keepass_password
+      - bw_master_password
+      - bw_clientid
+      - bw_clientsecret
+      # - keepass_keyfile
+    # No read_only here: Compose injects secrets sourced from variables by
+    # copying them into the container filesystem, which fails on a read-only
+    # root ("file is the sole supported option"). To run read_only, switch the
+    # secrets below to "file:" and add "read_only: true".
+    # The container runs as an unprivileged user without capabilities, so it can
+    # only write to world-writable paths and its own tmpfs.
+    tmpfs:
+      - /tmp:uid=${PUID:-1000},gid=${PGID:-1000},mode=0700
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # The healthcheck is defined in the image (Dockerfile)
+    # Only in the internal Vaultwarden network: the reverse proxy has the
+    # BW_SERVER hostname as an alias there
+    networks:
+      - vaultwarden
+
+networks:
+  vaultwarden:
+    external: true
+    name: ${VAULTWARDEN_NETWORK:-vaultwarden_internal}
+
+# Values come from .env (or your stack manager's environment). Compose places
+# them as files under /run/secrets in the container – so they show up neither
+# as environment variables in the container nor in "docker inspect".
+secrets:
+  keepass_password:
+    environment: KEEPASS_PASSWORD
+  bw_master_password:
+    environment: BW_MASTER_PASSWORD
+  bw_clientid:
+    environment: BW_CLIENTID
+  bw_clientsecret:
+    environment: BW_CLIENTSECRET
+  # A key file is binary and therefore stays a file
+  # keepass_keyfile:
+  #   file: ./secrets/keepass.keyx
