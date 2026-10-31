@@ -5,8 +5,8 @@ name: Check for updates
 #   - digests of the base images (python:3.14-alpine, node:22-alpine),
 #     i.e. rebuilds of the same tag with security updates
 #
-# If something changed, the Dockerfile is updated, a test build for amd64 is run
-# (including the smoke test), the change is committed to main and the
+# If something changed, the Dockerfile is updated, a test build for amd64 and
+# arm64 is run (plus a smoke test on amd64), the change is committed to main and the
 # "Docker image" workflow is started. If the test build fails, nothing is
 # committed and this run fails, so a broken update never reaches the registries.
 
@@ -37,7 +37,19 @@ jobs:
         id: updates
         run: python3 .github/scripts/check_updates.py Dockerfile
 
-      - name: Test build (amd64)
+      - name: QEMU (for arm64)
+        if: steps.updates.outputs.changed == 'true'
+        uses: docker/setup-qemu-action@v4
+
+      - name: Test build (amd64 + arm64)
+        if: steps.updates.outputs.changed == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: false
+
+      - name: Load amd64 image for the smoke test
         if: steps.updates.outputs.changed == 'true'
         uses: docker/build-push-action@v7
         with:

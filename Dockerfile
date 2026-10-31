@@ -9,8 +9,11 @@ ARG BW_CLI_VERSION=2026.10.1
 # WebAssembly module and the locale files remain.
 # BW_BUNDLE=false copies the CLI unbundled (fallback in case a new bw version
 # cannot be bundled).
+# The result is plain JavaScript/WebAssembly without native modules, so this
+# stage always runs on the build machine's own platform ($BUILDPLATFORM) – no
+# emulation for arm64, which is faster and avoids Node crashing under QEMU.
 # ---------------------------------------------------------------------------
-FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS bw
+FROM --platform=$BUILDPLATFORM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS bw
 ARG BW_CLI_VERSION
 ARG ESBUILD_VERSION=0.28.2
 ARG BW_BUNDLE=true

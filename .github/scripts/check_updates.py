@@ -27,7 +27,7 @@ ARG_SOURCES = {
     "ESBUILD_VERSION": ("npm", "https://registry.npmjs.org/esbuild/latest", lambda d: d["version"]),
 }
 ARG_RE = re.compile(r"^(ARG[ \t]+(\w+)=)(\S+)[ \t]*$", re.M)
-FROM_RE = re.compile(r"^(FROM[ \t]+)([^\s@]+:[^\s@]+)(@sha256:[0-9a-f]{64})?([ \t]+AS[ \t]+\S+)?[ \t]*$", re.M | re.I)
+FROM_RE = re.compile(r"^(FROM[ \t]+(?:--platform=\S+[ \t]+)?)([^\s@]+:[^\s@]+)(@sha256:[0-9a-f]{64})?([ \t]+AS[ \t]+\S+)?[ \t]*$", re.M | re.I)
 
 
 def fetch_json(url):
