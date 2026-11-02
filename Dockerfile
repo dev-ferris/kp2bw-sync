@@ -56,7 +56,7 @@ RUN set -eu; \
 # ---------------------------------------------------------------------------
 FROM python:3.14-alpine@sha256:eb2c62658b8d51bff0acc408504b76521d02030de56a8a3c1e830083e89b89d2
 
-ARG KP2BW_VERSION=3.10.0
+ARG KP2BW_VERSION=3.10.1
 
 # Node.js runtime only (no npm); the base image already ships tzdata.
 # --no-compile: no .pyc files (saves ~12 MB); the root filesystem is read-only
