@@ -13,7 +13,7 @@ ARG BW_CLI_VERSION=2026.10.1
 # stage always runs on the build machine's own platform ($BUILDPLATFORM) – no
 # emulation for arm64, which is faster and avoids Node crashing under QEMU.
 # ---------------------------------------------------------------------------
-FROM --platform=$BUILDPLATFORM node:22-alpine@sha256:0e1754758c2df4cfa3e68d59e2e1b7374bb7fd9ea6328eaaacf15cc934af8202 AS bw
+FROM --platform=$BUILDPLATFORM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS bw
 ARG BW_CLI_VERSION
 ARG ESBUILD_VERSION=0.28.2
 ARG BW_BUNDLE=true
@@ -54,7 +54,7 @@ RUN set -eu; \
 # ---------------------------------------------------------------------------
 # Stage 2: runtime image
 # ---------------------------------------------------------------------------
-FROM python:3.14-alpine@sha256:a18b20ad69e74df6cf6d2e1b1a260d7a1ecf5380fd83b310f83ba88c461cf894
+FROM python:3.14-alpine@sha256:5862d971d1f0ae26b258cefa4e893556b1d3aba81bd2ff30888704ad378bab67
 
 ARG KP2BW_VERSION=3.10.1
 
