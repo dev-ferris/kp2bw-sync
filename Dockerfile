@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # kp2bw needs Python >= 3.14, the Bitwarden CLI needs Node.js >= 22
 
-ARG BW_CLI_VERSION=2026.10.1
+ARG BW_CLI_VERSION=2026.11.0
 
 # ---------------------------------------------------------------------------
 # Stage 1: install the Bitwarden CLI and bundle it into a few files with esbuild.
